@@ -1,0 +1,30 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: gateway
+      POSTGRES_PASSWORD: gateway_dev
+      POSTGRES_DB: catalog
+    ports:
+      - "5433:5432"
+    volumes:
+      - catalog_data:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gateway -d catalog"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+  api:
+    build: .
+    environment:
+      NODE_ENV: development
+      PORT: 4000
+      DATABASE_URL: postgres://gateway:gateway_dev@db:5432/catalog
+    ports:
+      - "4000:4000"
+    depends_on:
+      db:
+        condition: service_healthy
+volumes:
+  catalog_data:
